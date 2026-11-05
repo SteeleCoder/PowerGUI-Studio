@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>PowerGUI Studio</title>
+	<style>
+		@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+		:root {
+			color-scheme: light;
+			--ink: #202a31;
+			--muted: #78838a;
+			--line: #e2e8e7;
+			--paper: #f5f7f4;
+			--white: #fff;
+			--green: #16785e;
+			--green-soft: #e9f4ef;
+			--coral: #d2644f;
+			--yellow: #f1c95d;
+			--shadow: 0 12px 32px rgb(34 54 46 / 8%);
+		}
+
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			min-width: 320px;
+			height: 100vh;
+			overflow: hidden;
+			color: var(--ink);
+			background: var(--paper);
+			font: 14px 'DM Sans', sans-serif;
+		}
+		button, input, select, textarea { font: inherit; }
+		button { color: inherit; }
+		.app { display: flex; flex-direction: column; height: 100%; }
+		.topbar {
+			z-index: 2;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			height: 64px;
+			padding: 0 22px;
+			background: var(--white);
+			border-bottom: 1px solid var(--line);
+		}
+		.brand { display: flex; align-items: center; gap: 11px; }
+		.brand-mark {
+			display: grid;
+			width: 34px;
+			height: 34px;
+			place-items: center;
+			color: white;
+			background: var(--green);
+			border-radius: 9px;
+			font: 700 16px 'Space Grotesk', sans-serif;
+		}
+		.brand-name { font: 700 16px 'Space Grotesk', sans-serif; letter-spacing: 0; }
+		.brand-name span { color: var(--green); }
+		.project-name { margin-left: 25px; padding-left: 25px; border-left: 1px solid var(--line); color: #647078; }
+		.top-actions { display: flex; align-items: center; gap: 9px; }
+		.button {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			min-height: 36px;
+			padding: 0 13px;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			background: var(--white);
+			cursor: pointer;
+			transition: background .16s ease, transform .16s ease, border-color .16s ease;
+		}
+		.button:hover { background: #f3f7f5; border-color: #cbd9d3; }
+		.button:active { transform: translateY(1px); }
+		.button.primary { color: white; background: var(--green); border-color: var(--green); }
+		.button.primary:hover { background: #12664f; }
+		.button.icon { width: 36px; padding: 0; font-size: 16px; }
+		.layout { display: grid; flex: 1; min-height: 0; grid-template-columns: var(--left-panel-width, 300px) 8px minmax(400px, 1fr) 8px var(--right-panel-width, 286px); }
+		.sidebar { min-height: 0; overflow-y: auto; background: var(--white); }
+		.left-sidebar { border-right: 1px solid var(--line); }
+		.right-sidebar { border-left: 1px solid var(--line); }
+		.panel-splitter { position: relative; z-index: 1; width: 8px; cursor: col-resize; touch-action: none; user-select: none; }
+		.panel-splitter::after { position: absolute; top: 50%; left: 3px; width: 2px; height: 34px; border-radius: 2px; background: #c4cfca; content: ''; transform: translateY(-50%); transition: background .15s, height .15s; }
+		.panel-splitter:hover::after, .panel-splitter:focus-visible::after, .panel-splitter.dragging::after { height: 48px; background: var(--green); }
+		.panel-splitter:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+		.panel-heading { padding: 21px 18px 14px; }
+		.panel-title { margin: 0; font: 600 13px 'Space Grotesk', sans-serif; }
+		.panel-subtitle { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
+		.section-label {
+			padding: 13px 18px 8px;
+			color: #929c9e;
+			font: 500 10px 'DM Mono', monospace;
+			text-transform: uppercase;
+			letter-spacing: .08em;
+		}
+		.control-group { padding-bottom: 5px; }
+		.control-group .section-label { padding-top: 12px; }
+		.control-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 14px 10px; }
+		.grid-settings { display: grid; gap: 10px; padding: 13px 14px 18px; border-top: 1px solid var(--line); }
+		.grid-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
+		.grid-toggle input { width: 15px; height: 15px; margin: 0; accent-color: var(--green); }
+		.grid-size { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 11px; }
+		.grid-size input { width: 74px; height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 5px; background: white; color: var(--ink); }
+		.grid-size input:disabled { color: #a4adaa; background: #f5f7f5; }
+		.control-tile {
+			display: flex;
+			min-height: 64px;
+			align-items: center;
+			gap: 9px;
+			padding: 9px;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			background: white;
+			cursor: grab;
+			user-select: none;
+			transition: border-color .15s, background .15s, transform .15s;
+		}
+		.control-tile:hover { border-color: #94b9a9; background: #f8fbf9; transform: translateY(-1px); }
+		.control-tile:active { cursor: grabbing; }
+		.tile-icon { display: grid; width: 28px; height: 28px; place-items: center; flex: 0 0 28px; color: var(--green); background: var(--green-soft); border-radius: 5px; font-size: 14px; }
+		.tile-name { overflow-wrap: anywhere; font-size: 10px; font-weight: 600; line-height: 1.15; }
+		.stage { display: flex; min-width: 0; min-height: 0; flex-direction: column; background: #f3f5f2; }
+		.stage-toolbar { display: flex; height: 52px; flex: 0 0 52px; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--line); background: #fafbf9; }
+		.breadcrumbs { color: #77827f; font-size: 12px; }
+		.breadcrumbs strong { color: var(--ink); font-weight: 600; }
+		.stage-tools { display: flex; align-items: center; gap: 8px; color: #7a8584; font-size: 12px; }
+		.zoom { display: inline-flex; height: 28px; align-items: center; gap: 8px; padding: 0 8px; border: 1px solid var(--line); border-radius: 5px; background: white; }
+		.canvas-wrap { display: grid; flex: 1; min-height: 0; place-items: center; overflow: auto; padding: 34px; background-image: radial-gradient(#d7dfdb 0.8px, transparent .8px); background-size: 18px 18px; }
+		.form-window {
+			position: relative;
+			display: flex;
+			width: min(100%, 560px);
+			height: 430px;
+			min-height: 280px;
+			flex-direction: column;
+			align-self: center;
+			background: #fff;
+			border: 1px solid #cbd4d2;
+			border-radius: 7px;
+			box-shadow: var(--shadow);
+			animation: arrive .28s ease both;
+		}
+		.form-resize { position: absolute; right: 2px; bottom: 2px; z-index: 2; width: 18px; height: 18px; padding: 0; border: 0; background: transparent; cursor: nwse-resize; touch-action: none; }
+		.form-resize::after { position: absolute; right: 3px; bottom: 3px; width: 9px; height: 9px; border-right: 2px solid #87958f; border-bottom: 2px solid #87958f; content: ''; }
+		@keyframes arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+		.window-titlebar { display: flex; height: 37px; flex: 0 0 37px; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid #e8ecea; color: #46534f; font-size: 12px; }
+		.window-titlebar b { font-weight: 600; }
+		.window-dots { color: #88938f; letter-spacing: 3px; }
+		.form-content { position: relative; display: block; min-height: 330px; flex: 1; padding: 0; }
+		.form-content.grid-active { background-image: radial-gradient(#cbd8d1 0.8px, transparent 0.8px); background-position: 0 0; background-size: var(--control-grid-size) var(--control-grid-size); }
+		.drop-hint { position: absolute; inset: 20px; display: grid; place-items: center; border: 1px dashed #cbd8d1; border-radius: 5px; color: #8b9691; text-align: center; transition: background .15s, border-color .15s; }
+		.drop-hint.dragover { border-color: var(--green); background: #eff8f2; }
+		.hint-mark { display: grid; width: 36px; height: 36px; margin: 0 auto 10px; place-items: center; color: var(--green); background: var(--green-soft); border-radius: 50%; font-size: 18px; }
+		.hint-title { color: #59645f; font-size: 12px; font-weight: 600; }
+		.hint-copy { margin-top: 5px; font-size: 11px; }
+		.design-control { position: absolute; display: flex; min-height: 24px; align-items: stretch; padding: 0; border: 1px solid transparent; border-radius: 4px; cursor: move; touch-action: none; user-select: none; }
+		.design-control:hover { border-color: #b7d5c6; background: #f8fbf9; }
+		.design-control.selected { border-color: var(--green); background: #f1f8f4; box-shadow: 0 0 0 1px var(--green); }
+		.design-control label { width: 112px; flex: 0 0 112px; color: #38433f; font-size: 12px; }
+		.design-control input[type=text], .design-control select, .fake-input { width: 100%; min-width: 0; height: 30px; padding: 0 9px; border: 1px solid #cdd6d2; border-radius: 4px; color: #4c5753; background: white; font-size: 12px; }
+		.design-control input[type=checkbox] { accent-color: var(--green); }
+		.design-control .button-preview { min-height: 30px; padding: 0 14px; border: 1px solid #c5d1cc; border-radius: 4px; background: #f7f9f8; font-size: 12px; }
+		.component-preview { display: inline-flex; min-height: 28px; align-items: center; gap: 7px; padding: 3px 8px; border: 1px dashed #b8c5bf; border-radius: 4px; color: #64716b; background: #f8faf8; font: 11px 'DM Mono', monospace; }
+		.preview-list { display: grid; width: 100%; gap: 3px; padding: 4px; border: 1px solid #cdd6d2; border-radius: 4px; background: white; color: #4c5753; font-size: 11px; }
+		.preview-surface { display: grid; width: 100%; height: 100%; place-items: center; border: 1px solid #cdd6d2; border-radius: 4px; color: #78838a; background: #f7f9f8; font-size: 11px; }
+		.design-control > :first-child { width: 100%; min-width: 0; height: 100%; min-height: 0; flex: 1 1 auto; }
+		.design-control > label { display: flex; align-items: center; }
+		.design-control > input[type=text], .design-control > select, .design-control > .fake-input { height: 100%; }
+		.design-control > textarea { resize: none; }
+		.design-control > .button-preview { width: 100%; height: 100%; min-height: 0; padding: 0 10px; }
+		.design-control.nonvisual { width: auto !important; height: auto !important; min-height: 0; padding: 3px 6px; }
+		.design-control.nonvisual > :first-child { width: auto; height: auto; flex: 0 0 auto; }
+		.control-delete { position: absolute; top: -9px; right: -9px; display: none; width: 20px; height: 20px; align-items: center; justify-content: center; padding: 0; border: 1px solid #f0c9c1; border-radius: 50%; color: #a94836; background: white; cursor: pointer; }
+		.design-control.selected .control-delete { display: flex; }
+		.control-resize { position: absolute; right: -5px; bottom: -5px; display: none; width: 12px; height: 12px; padding: 0; border: 1px solid white; border-radius: 2px; background: var(--green); cursor: nwse-resize; touch-action: none; }
+		.design-control.selected .control-resize { display: block; }
+		.canvas-footer { display: flex; min-height: 37px; align-items: center; justify-content: space-between; padding: 0 13px; border-top: 1px solid #eef0ef; color: #89938f; font: 11px 'DM Mono', monospace; }
+		.inspector-empty { padding: 18px; color: #858f8b; font-size: 12px; line-height: 1.6; }
+		.property-form { padding: 0 18px 20px; }
+		.field { margin-top: 15px; }
+		.field label { display: block; margin-bottom: 6px; color: #64706b; font-size: 11px; font-weight: 600; }
+		.field input, .field select, .field textarea { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid #dce3e0; border-radius: 5px; outline: none; background: #fff; font-size: 12px; }
+		.field textarea { min-height: 60px; resize: vertical; }
+		.field input:focus, .field select:focus, .field textarea:focus { border-color: #6ea78e; box-shadow: 0 0 0 2px #e6f3eb; }
+		.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+		.field .check-field { display: flex; align-items: center; gap: 8px; }
+		.check-field input { width: 15px; min-height: 15px; accent-color: var(--green); }
+		.event-list { display: grid; gap: 7px; margin-top: 10px; }
+		.event-item { display: flex; min-height: 32px; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; color: #53605a; background: #f8faf8; font: 11px 'DM Mono', monospace; }
+		.event-remove { width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; color: #a94836; background: transparent; cursor: pointer; font-size: 16px; }
+		.event-remove:hover { background: #f8eae7; }
+		.event-empty { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
+		.inspector-separator { height: 1px; margin: 19px 0 0; background: var(--line); }
+		.inspector-note { margin: 15px 18px; padding: 10px; border-left: 2px solid var(--yellow); color: #69746f; background: #fbf8eb; font-size: 11px; line-height: 1.5; }
+		.output-drawer { display: flex; height: 246px; flex: 0 0 246px; flex-direction: column; border-top: 1px solid #2e3939; color: #e2e9e7; background: #202a2a; transition: height .2s, flex-basis .2s; }
+		.output-drawer.collapsed { height: 42px; flex-basis: 42px; }
+		.output-head { display: flex; height: 42px; flex: 0 0 42px; align-items: center; justify-content: space-between; padding: 0 19px; border-bottom: 1px solid #364241; }
+		.output-label { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 600; }
+		.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #63c599; }
+		.output-actions { display: flex; gap: 7px; }
+		.output-actions .button { min-height: 27px; padding: 0 9px; border-color: #485451; color: #d7e0dd; background: #293432; font-size: 11px; }
+		.output-actions .button:hover { background: #36423e; }
+		.output-code { min-height: 0; flex: 1; overflow: auto; padding: 12px 19px 16px; color: #c8d6ce; font: 11px/1.55 'DM Mono', monospace; white-space: pre; tab-size: 4; }
+		.output-code .keyword { color: #edbd6b; }
+		.output-code .string { color: #a9d892; }
+		.toast { position: fixed; right: 20px; bottom: 20px; z-index: 5; padding: 11px 15px; border-radius: 6px; color: white; background: #263d34; box-shadow: var(--shadow); opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s; }
+		.toast.show { opacity: 1; transform: translateY(0); }
+		@media (max-width: 900px) {
+			.layout { grid-template-columns: var(--left-panel-width, 178px) 8px minmax(300px, 1fr); }
+			.right-sidebar { display: none; }
+			.right-splitter { display: none; }
+			.control-list { grid-template-columns: 1fr; }
+			.grid-settings { padding-top: 10px; }
+			.project-name { display: none; }
+		}
+		@media (max-width: 620px) {
+			body { height: auto; min-height: 100vh; overflow: auto; }
+			.app { min-height: 100vh; height: auto; }
+			.topbar { height: 58px; padding: 0 12px; }
+			.top-actions .button:not(.primary) { display: none; }
+			.top-actions .primary { min-height: 33px; padding: 0 10px; font-size: 12px; }
+			.layout { display: flex; min-height: 580px; flex-direction: column; }
+			.panel-splitter { display: none; }
+			.left-sidebar { order: 2; border-top: 1px solid var(--line); border-right: 0; }
+			.left-sidebar .panel-heading { padding: 13px 14px 7px; }
+			.left-sidebar .panel-subtitle { display: none; }
+			.section-label { display: none; }
+			.control-group .section-label { display: block; padding: 8px 10px 4px; }
+			.control-list { grid-template-columns: repeat(4, minmax(62px, 1fr)); gap: 6px; padding: 5px 10px 8px; }
+			.control-tile { min-height: 62px; flex-direction: column; justify-content: center; gap: 4px; padding: 5px; }
+			.tile-icon { width: 22px; height: 22px; flex-basis: 22px; }
+			.tile-name { font-size: 10px; }
+			.stage { min-height: 420px; order: 1; }
+			.stage-toolbar { padding: 0 12px; }
+			.canvas-wrap { padding: 16px 10px; }
+			.form-window { min-height: 330px; }
+			.form-content { min-height: 290px; padding: 0; }
+			.design-control label { width: 88px; flex-basis: 88px; }
+			.output-drawer { height: 190px; flex-basis: 190px; }
+		}
+	</style>
+</head>
+<body>
+	<div class="app">
+		<header class="topbar">
+			<div class="brand">
+				<div class="brand-mark">P</div>
+				<div class="brand-name">Power<span>GUI</span></div>
+				<div class="project-name">Untitled form</div>
+			</div>
+			<div class="top-actions">
+				<button class="button icon" id="clearBtn" title="Clear form" aria-label="Clear form">⌫</button>
+				<button class="button" id="newBtn">＋ New form</button>
+				<button class="button primary" id="downloadBtn">↓ &nbsp;Export .ps1</button>
+			</div>
+		</header>
+
+		<main class="layout">
+			<aside class="sidebar left-sidebar">
+				<div class="panel-heading">
+					<h1 class="panel-title">Controls</h1>
+					<p class="panel-subtitle">Drag a control onto your form</p>
+				</div>
+				<div id="controlList"></div>
+				<div class="grid-settings">
+					<label class="grid-toggle"><input id="alignGrid" type="checkbox" checked> Align to grid</label>
+					<label class="grid-size" for="gridSize">Grid size <input id="gridSize" type="number" min="2" max="100" value="10" disabled></label>
+				</div>
+			</aside>
+			<div class="panel-splitter left-splitter" role="separator" tabindex="0" aria-label="Resize Controls panel" aria-orientation="vertical" aria-controls="controlList" aria-valuemin="150" aria-valuemax="360" title="Drag to resize Controls"></div>
+
+			<section class="stage">
+				<div class="stage-toolbar">
+					<div class="breadcrumbs">Workspace&nbsp; / &nbsp;<strong>Form design</strong></div>
+					<div class="stage-tools"><span>100%</span><span class="zoom">− &nbsp; 100% &nbsp; +</span></div>
+				</div>
+				<div class="canvas-wrap" id="canvasWrap">
+					<div class="form-window" id="formWindow">
+						<div class="window-titlebar"><b id="windowTitle">My PowerShell App</b><span class="window-dots">− □ ×</span></div>
+						<div class="form-content" id="formContent">
+							<div class="drop-hint" id="dropHint">
+								<div><div class="hint-mark">＋</div><div class="hint-title">Your form starts here</div><div class="hint-copy">Drag controls from the left panel</div></div>
+							</div>
+						</div>
+						<div class="canvas-footer"><span id="controlCount">0 controls</span><span>Windows Forms</span></div>
+						<button class="form-resize" id="formResize" type="button" title="Drag to resize form" aria-label="Resize form"></button>
+					</div>
+				</div>
+				<section class="output-drawer" id="outputDrawer">
+					<div class="output-head">
+						<div class="output-label"><span class="status-dot"></span>PowerShell output <span style="color:#80908a;font-weight:400">· live</span></div>
+						<div class="output-actions">
+							<button class="button" id="copyBtn">▢ &nbsp;Copy</button>
+							<button class="button" id="collapseBtn" title="Collapse output" aria-label="Collapse output">⌄</button>
+						</div>
+					</div>
+					<pre class="output-code" id="outputCode"></pre>
+				</section>
+			</section>
+			<div class="panel-splitter right-splitter" role="separator" tabindex="0" aria-label="Resize Properties panel" aria-orientation="vertical" aria-controls="inspector" aria-valuemin="220" aria-valuemax="420" title="Drag to resize Properties"></div>
+
+			<aside class="sidebar right-sidebar">
+				<div class="panel-heading"><h2 class="panel-title">Properties</h2><p class="panel-subtitle" id="selectionSubtitle">Form settings</p></div>
+				<div id="inspector"></div>
+				<div class="inspector-separator"></div>
+				<div class="inspector-note">Select a control on the canvas to edit its properties.</div>
+			</aside>
+		</main>
+	</div>
+	<div class="toast" id="toast" role="status"></div>
+
+	<script>
+		const definitions = [
+			{ category: 'Button Controls', type: 'Button', icon: '▭', text: 'Button', name: 'Button' },
+			{ category: 'Button Controls', type: 'CheckBox', icon: '☑', text: 'Check me', name: 'CheckBox' },
+			{ category: 'Button Controls', type: 'RadioButton', icon: '◉', text: 'Option', name: 'RadioButton' },
+			{ category: 'Button Controls', type: 'CheckedListBox', icon: '☷', text: '', name: 'CheckedListBox' },
+			{ category: 'Text and Input', type: 'TextBox', icon: '▤', text: '', name: 'TextBox' },
+			{ category: 'Text and Input', type: 'RichTextBox', icon: '≡', text: '', name: 'RichTextBox', multiline: true },
+			{ category: 'Text and Input', type: 'MaskedTextBox', icon: '▥', text: '  -  ', name: 'MaskedTextBox' },
+			{ category: 'Text and Input', type: 'ComboBox', icon: '⌄', text: 'Select an option', name: 'ComboBox' },
+			{ category: 'Text and Input', type: 'ListBox', icon: '☰', text: '', name: 'ListBox' },
+			{ category: 'Text and Input', type: 'NumericUpDown', icon: '±', text: '', name: 'NumericUpDown' },
+			{ category: 'Data Display', type: 'DataGridView', icon: '▦', text: '', name: 'DataGridView' },
+			{ category: 'Data Display', type: 'Label', icon: 'T', text: 'Label', name: 'Label' },
+			{ category: 'Data Display', type: 'ImageList', icon: '▧', text: '', name: 'ImageList', visual: false },
+			{ category: 'Data Display', type: 'PictureBox', icon: '▣', text: '', name: 'PictureBox' },
+			{ category: 'Data Display', type: 'ListView', icon: '☷', text: '', name: 'ListView' },
+			{ category: 'Data Display', type: 'TreeView', icon: '⑂', text: '', name: 'TreeView' },
+			{ category: 'Navigation and Layout', type: 'MenuStrip', icon: '☰', text: '', name: 'MenuStrip' },
+			{ category: 'Navigation and Layout', type: 'ContextMenuStrip', icon: '⋮', text: '', name: 'ContextMenuStrip', visual: false },
+			{ category: 'Navigation and Layout', type: 'TabControl', icon: '▤', text: '', name: 'TabControl' },
+			{ category: 'Navigation and Layout', type: 'Panel', icon: '▱', text: '', name: 'Panel' },
+			{ category: 'Navigation and Layout', type: 'GroupBox', icon: '▢', text: 'GroupBox', name: 'GroupBox' },
+			{ category: 'Navigation and Layout', type: 'SplitContainer', icon: '◫', text: '', name: 'SplitContainer' },
+			{ category: 'Navigation and Layout', type: 'FlowLayoutPanel', icon: '☷', text: '', name: 'FlowLayoutPanel' },
+			{ category: 'Navigation and Layout', type: 'TableLayoutPanel', icon: '▦', text: '', name: 'TableLayoutPanel' },
+			{ category: 'Dialogs and Components', type: 'OpenFileDialog', icon: '↥', text: '', name: 'OpenFileDialog', visual: false },
+			{ category: 'Dialogs and Components', type: 'SaveFileDialog', icon: '↧', text: '', name: 'SaveFileDialog', visual: false },
+			{ category: 'Dialogs and Components', type: 'FolderBrowserDialog', icon: '▰', text: '', name: 'FolderBrowserDialog', visual: false },
+			{ category: 'Dialogs and Components', type: 'ColorDialog', icon: '◉', text: '', name: 'ColorDialog', visual: false },
+			{ category: 'Dialogs and Components', type: 'FontDialog', icon: 'A', text: '', name: 'FontDialog', visual: false },
+			{ category: 'Dialogs and Components', type: 'Timer', icon: '◷', text: '', name: 'Timer', visual: false },
+			{ category: 'Dialogs and Components', type: 'StatusStrip', icon: '▰', text: '', name: 'StatusStrip' },
+			{ category: 'Dialogs and Components', type: 'ProgressBar', icon: '▰', text: '', name: 'ProgressBar' },
+			{ category: 'Dialogs and Components', type: 'ToolTip', icon: '?', text: '', name: 'ToolTip', visual: false }
+		];
+		const controlProperties = {
+			Button: ['text'], CheckBox: ['text', 'checked'], RadioButton: ['text', 'checked'],
+			TextBox: ['text', 'multiline', 'readOnly', 'maxLength'], RichTextBox: ['text', 'multiline', 'readOnly'],
+			MaskedTextBox: ['text'], Label: ['text'], GroupBox: ['text'],
+			ComboBox: ['items', 'dropDownStyle'], CheckedListBox: ['items'], ListBox: ['items'],
+			NumericUpDown: ['minimum', 'maximum', 'increment', 'value'],
+			ProgressBar: ['minimum', 'maximum', 'value'], DataGridView: ['readOnly']
+		};
+		const controlSpecificEvents = {
+			Button: ['MouseDown', 'MouseUp'],
+			CheckBox: ['CheckedChanged'],
+			RadioButton: ['CheckedChanged'],
+			TextBox: ['TextChanged', 'KeyDown', 'KeyUp', 'Enter', 'Leave'],
+			RichTextBox: ['TextChanged', 'SelectionChanged', 'KeyDown', 'KeyUp'],
+			MaskedTextBox: ['TextChanged', 'MaskInputRejected', 'KeyDown', 'KeyUp'],
+			ComboBox: ['SelectedIndexChanged', 'SelectionChangeCommitted', 'TextChanged', 'DropDown', 'DropDownClosed'],
+			CheckedListBox: ['SelectedIndexChanged', 'ItemCheck'],
+			ListBox: ['SelectedIndexChanged', 'SelectedValueChanged'],
+			NumericUpDown: ['ValueChanged'],
+			DataGridView: ['CellClick', 'CellDoubleClick', 'CellValueChanged', 'SelectionChanged'],
+			ListView: ['SelectedIndexChanged', 'ItemActivate', 'ItemCheck'],
+			TreeView: ['AfterSelect', 'NodeMouseClick'],
+			TabControl: ['SelectedIndexChanged'],
+			MenuStrip: ['ItemClicked'],
+			ContextMenuStrip: ['Opening', 'Closed'],
+			OpenFileDialog: ['FileOk'],
+			SaveFileDialog: ['FileOk'],
+			FolderBrowserDialog: ['HelpRequest'],
+			ColorDialog: ['HelpRequest'],
+			FontDialog: ['Apply', 'HelpRequest'],
+			Timer: ['Tick'],
+			ToolTip: ['Popup', 'Draw']
+		};
+		const controls = [];
+		let selectedId = null;
+		let nextId = 1;
+		let formWidth = 560;
+		let formHeight = 430;
+
+		const controlList = document.getElementById('controlList');
+		const formContent = document.getElementById('formContent');
+		const dropHint = document.getElementById('dropHint');
+		const outputCode = document.getElementById('outputCode');
+		const inspector = document.getElementById('inspector');
+		const layout = document.querySelector('.layout');
+		const alignGridInput = document.getElementById('alignGrid');
+		const gridSizeInput = document.getElementById('gridSize');
+
+		function gridStep() {
+			const size = Number(gridSizeInput.value);
+			return Math.min(100, Math.max(2, Number.isFinite(size) ? size : 10));
+		}
+
+		function snapToGrid(value, minimum = 0, maximum = Infinity) {
+			if (!alignGridInput.checked) return Math.min(maximum, Math.max(minimum, value));
+			const step = gridStep();
+			const minGridValue = minimum > 0 ? Math.ceil(minimum / step) * step : 0;
+			const maxGridValue = Number.isFinite(maximum) ? Math.floor(maximum / step) * step : Infinity;
+			if (maxGridValue < minGridValue) return Math.max(minimum, Math.min(maximum, minGridValue));
+			return Math.max(minGridValue, Math.min(maxGridValue, Math.round(value / step) * step));
+		}
+
+		function alignControlToGrid(control) {
+			control.width = snapToGrid(control.width, 40, formContent.clientWidth);
+			control.height = snapToGrid(control.height, 24, formContent.clientHeight);
+			control.x = snapToGrid(control.x, 0, formContent.clientWidth - control.width);
+			control.y = snapToGrid(control.y, 0, formContent.clientHeight - control.height);
+		}
+
+		function updateGridAppearance() {
+			const enabled = alignGridInput.checked;
+			gridSizeInput.disabled = !enabled;
+			formContent.classList.toggle('grid-active', enabled);
+			formContent.style.setProperty('--control-grid-size', `${gridStep()}px`);
+		}
+
+		updateGridAppearance();
+
+		alignGridInput.addEventListener('change', () => {
+			updateGridAppearance();
+			if (alignGridInput.checked) controls.forEach(alignControlToGrid);
+			render();
+		});
+		gridSizeInput.addEventListener('input', () => {
+			const size = gridStep();
+			if (gridSizeInput.value !== '') gridSizeInput.value = String(size);
+			updateGridAppearance();
+			if (alignGridInput.checked) {
+				controls.forEach(alignControlToGrid);
+				controls.forEach(control => {
+					const element = formContent.querySelector(`[data-id="${control.id}"]`);
+					if (element) applyControlGeometry(element, control);
+				});
+				if (selectedId !== null) updateGeometryFields(controls.find(control => control.id === selectedId));
+				outputCode.textContent = generatePowerShell();
+			}
+		});
+
+		function configureSplitter(splitter, side, minimum, maximum, stageMinimum) {
+			let activePointer = null;
+			const getWidth = () => {
+				const panel = layout.querySelector(side === 'left' ? '.left-sidebar' : '.right-sidebar');
+				return panel.getBoundingClientRect().width;
+			};
+			const setWidth = width => {
+				const otherWidth = side === 'left'
+					? layout.querySelector('.right-sidebar').getBoundingClientRect().width
+					: layout.querySelector('.left-sidebar').getBoundingClientRect().width;
+				const splitterSpace = window.innerWidth > 900 ? 16 : 8;
+				const availableMaximum = Math.max(minimum, layout.clientWidth - otherWidth - stageMinimum - splitterSpace);
+				const boundedWidth = Math.round(Math.max(minimum, Math.min(Math.min(maximum, availableMaximum), width)));
+				layout.style.setProperty(side === 'left' ? '--left-panel-width' : '--right-panel-width', `${boundedWidth}px`);
+				splitter.setAttribute('aria-valuenow', String(boundedWidth));
+			};
+			const move = event => {
+				if (event.pointerId !== activePointer) return;
+				const bounds = layout.getBoundingClientRect();
+				setWidth(side === 'left' ? event.clientX - bounds.left : bounds.right - event.clientX);
+			};
+			const stop = event => {
+				if (event.pointerId !== activePointer) return;
+				activePointer = null;
+				splitter.classList.remove('dragging');
+				splitter.releasePointerCapture?.(event.pointerId);
+			};
+			splitter.setAttribute('aria-valuenow', String(Math.round(getWidth())));
+			splitter.addEventListener('pointerdown', event => {
+				if (event.button !== 0) return;
+				activePointer = event.pointerId;
+				splitter.setPointerCapture(event.pointerId);
+				splitter.classList.add('dragging');
+				event.preventDefault();
+			});
+			splitter.addEventListener('pointermove', move);
+			splitter.addEventListener('pointerup', stop);
+			splitter.addEventListener('pointercancel', stop);
+			splitter.addEventListener('keydown', event => {
+				const step = event.shiftKey ? 30 : 10;
+				const leftwardChange = side === 'left' ? -step : step;
+				if (event.key === 'ArrowLeft') setWidth(getWidth() + leftwardChange);
+				else if (event.key === 'ArrowRight') setWidth(getWidth() - leftwardChange);
+				else if (event.key === 'ArrowDown') setWidth(getWidth() - step);
+				else if (event.key === 'ArrowUp') setWidth(getWidth() + step);
+				else if (event.key === 'Home') setWidth(minimum);
+				else if (event.key === 'End') setWidth(maximum);
+				else return;
+				event.preventDefault();
+			});
+		}
+
+		configureSplitter(document.querySelector('.left-splitter'), 'left', 150, 360, 350);
+		configureSplitter(document.querySelector('.right-splitter'), 'right', 220, 420, 350);
+
+		const controlGroups = new Map();
+		definitions.forEach((definition, index) => {
+			let group = controlGroups.get(definition.category);
+			if (!group) {
+				group = document.createElement('section');
+				group.className = 'control-group';
+				group.innerHTML = `<h2 class="section-label">${definition.category}</h2><div class="control-list"></div>`;
+				controlGroups.set(definition.category, group);
+				controlList.append(group);
+			}
+			const tile = document.createElement('div');
+			tile.className = 'control-tile';
+			tile.draggable = true;
+			tile.dataset.index = index;
+			tile.innerHTML = `<span class="tile-icon">${definition.icon}</span><span class="tile-name">${definition.name}</span>`;
+			tile.addEventListener('dragstart', event => {
+				event.dataTransfer.setData('text/plain', String(index));
+				event.dataTransfer.effectAllowed = 'copy';
+			});
+			tile.addEventListener('click', () => addControl(index));
+			group.querySelector('.control-list').append(tile);
+		});
+
+		formContent.addEventListener('dragover', event => {
+			event.preventDefault();
+			dropHint?.classList.add('dragover');
+		});
+		formContent.addEventListener('dragleave', event => {
+			if (!formContent.contains(event.relatedTarget)) dropHint?.classList.remove('dragover');
+		});
+		formContent.addEventListener('drop', event => {
+			event.preventDefault();
+			dropHint?.classList.remove('dragover');
+			const index = Number(event.dataTransfer.getData('text/plain'));
+			if (Number.isInteger(index) && definitions[index]) {
+				const bounds = formContent.getBoundingClientRect();
+				addControl(index, event.clientX - bounds.left, event.clientY - bounds.top);
+			}
+		});
+
+		function addControl(index, dropX = null, dropY = null) {
+			const definition = definitions[index];
+			if (!definition) return;
+			const control = {
+				id: nextId++, type: definition.type, visual: definition.visual !== false, name: `${definition.name}${controls.filter(item => item.name.startsWith(definition.name)).length + 1}`,
+				text: definition.text, x: 20, y: 20 + controls.length * 46, width: definition.type === 'Button' ? 100 : 280,
+				height: definition.multiline ? 64 : ['DataGridView', 'CheckedListBox', 'ListBox', 'ListView', 'TreeView'].includes(definition.type) ? 96 : 34,
+				checked: false, items: 'Option 1, Option 2, Option 3', events: [], multiline: Boolean(definition.multiline), readOnly: false,
+				maxLength: 0, dropDownStyle: 'DropDown', minimum: 0, maximum: 100, increment: 1, value: 0, enabled: true, visible: true
+			};
+			if (dropX !== null && dropY !== null) {
+				control.x = Math.max(0, dropX - control.width / 2);
+				control.y = Math.max(0, dropY - control.height / 2);
+			}
+			if (alignGridInput.checked) alignControlToGrid(control);
+			controls.push(control);
+			selectedId = control.id;
+			render();
+		}
+
+		function render() {
+			formContent.querySelectorAll('.design-control').forEach(element => element.remove());
+			const hint = document.getElementById('dropHint');
+			if (hint) hint.style.display = controls.length ? 'none' : 'grid';
+			controls.forEach(control => {
+				const element = document.createElement('div');
+				element.className = `design-control${control.visual ? '' : ' nonvisual'}${control.id === selectedId ? ' selected' : ''}`;
+				element.dataset.id = control.id;
+				applyControlGeometry(element, control);
+				element.addEventListener('click', event => {
+					if (event.target.closest('.control-delete')) return;
+					selectedId = control.id;
+					render();
+				});
+				element.addEventListener('pointerdown', event => startControlMove(event, element, control));
+				element.append(createPreview(control));
+				if (control.visual) {
+					const resize = document.createElement('button');
+					resize.className = 'control-resize';
+					resize.type = 'button';
+					resize.title = 'Drag to resize control';
+					resize.setAttribute('aria-label', `Resize ${control.name}`);
+					resize.addEventListener('pointerdown', event => startControlResize(event, element, control));
+					element.append(resize);
+				}
+				const remove = document.createElement('button');
+				remove.className = 'control-delete';
+				remove.type = 'button';
+				remove.title = 'Remove control';
+				remove.textContent = '×';
+				remove.addEventListener('click', event => {
+					event.stopPropagation();
+					controls.splice(controls.findIndex(item => item.id === control.id), 1);
+					selectedId = null;
+					render();
+				});
+				element.append(remove);
+				formContent.append(element);
+			});
+			document.getElementById('controlCount').textContent = `${controls.length} ${controls.length === 1 ? 'control' : 'controls'}`;
+			renderInspector();
+			outputCode.textContent = generatePowerShell();
+		}
+
+		function applyControlGeometry(element, control) {
+			element.style.left = `${control.x}px`;
+			element.style.top = `${control.y}px`;
+			element.style.width = `${control.width}px`;
+			element.style.height = `${control.height}px`;
+		}
+
+		function updateControlPreview(control) {
+			const element = formContent.querySelector(`[data-id="${control.id}"]`);
+			if (!element) return;
+			const preview = element.firstElementChild;
+			if (preview) element.replaceChild(createPreview(control), preview);
+			applyControlGeometry(element, control);
+			document.getElementById('selectionSubtitle').textContent = `${control.type} · ${control.name}`;
+			outputCode.textContent = generatePowerShell();
+		}
+
+		function selectControl(control) {
+			selectedId = control.id;
+			formContent.querySelectorAll('.design-control').forEach(element => {
+				element.classList.toggle('selected', Number(element.dataset.id) === control.id);
+			});
+			renderInspector();
+		}
+
+		function updateGeometryFields(control) {
+			if (selectedId !== control.id) return;
+			for (const [id, value] of [['propX', control.x], ['propY', control.y], ['propWidth', control.width], ['propHeight', control.height]]) {
+				const input = document.getElementById(id);
+				if (input) input.value = value;
+			}
+		}
+
+		function startControlMove(event, element, control) {
+			if (event.button !== 0 || event.target.closest('.control-delete, .control-resize')) return;
+			event.preventDefault();
+			selectControl(control);
+			element.setPointerCapture(event.pointerId);
+			const startX = event.clientX;
+			const startY = event.clientY;
+			const originX = control.x;
+			const originY = control.y;
+			const move = moveEvent => {
+				control.x = snapToGrid(originX + moveEvent.clientX - startX, 0, formContent.clientWidth - control.width);
+				control.y = snapToGrid(originY + moveEvent.clientY - startY, 0, formContent.clientHeight - control.height);
+				applyControlGeometry(element, control);
+				updateGeometryFields(control);
+				outputCode.textContent = generatePowerShell();
+			};
+			const stop = () => {
+				element.removeEventListener('pointermove', move);
+				element.removeEventListener('pointerup', stop);
+				element.removeEventListener('pointercancel', stop);
+			};
+			element.addEventListener('pointermove', move);
+			element.addEventListener('pointerup', stop);
+			element.addEventListener('pointercancel', stop);
+		}
+
+		function startControlResize(event, element, control) {
+			if (event.button !== 0) return;
+			event.preventDefault();
+			event.stopPropagation();
+			selectControl(control);
+			const handle = event.currentTarget;
+			handle.setPointerCapture(event.pointerId);
+			const startX = event.clientX;
+			const startY = event.clientY;
+			const originWidth = control.width;
+			const originHeight = control.height;
+			const move = moveEvent => {
+				const maxWidth = Math.max(40, formContent.clientWidth - control.x);
+				const maxHeight = Math.max(24, formContent.clientHeight - control.y);
+				control.width = snapToGrid(originWidth + moveEvent.clientX - startX, 40, maxWidth);
+				control.height = snapToGrid(originHeight + moveEvent.clientY - startY, 24, maxHeight);
+				applyControlGeometry(element, control);
+				updateGeometryFields(control);
+				outputCode.textContent = generatePowerShell();
+			};
+			const stop = () => {
+				handle.removeEventListener('pointermove', move);
+				handle.removeEventListener('pointerup', stop);
+				handle.removeEventListener('pointercancel', stop);
+			};
+			handle.addEventListener('pointermove', move);
+			handle.addEventListener('pointerup', stop);
+			handle.addEventListener('pointercancel', stop);
+		}
+
+		function createPreview(control) {
+			if (!control.visual) {
+				const component = document.createElement('span'); component.className = 'component-preview';
+				component.textContent = `◇ ${control.type}`; return component;
+			}
+			if (control.type === 'Label') {
+				const label = document.createElement('label'); label.textContent = control.text || 'Label'; return label;
+			}
+			if (control.type === 'Button') {
+				const button = document.createElement('button'); button.className = 'button-preview'; button.textContent = control.text || 'Button'; return button;
+			}
+			if (control.type === 'CheckBox' || control.type === 'RadioButton') {
+				const label = document.createElement('label');
+				const input = document.createElement('input'); input.type = control.type === 'CheckBox' ? 'checkbox' : 'radio'; input.checked = control.checked;
+				label.append(input, document.createTextNode(` ${control.text || control.type}`)); return label;
+			}
+			if (control.type === 'ComboBox') {
+				const select = document.createElement('select'); select.className = 'fake-input';
+				control.items.split(',').map(item => item.trim()).filter(Boolean).forEach(item => { const option = document.createElement('option'); option.textContent = item; select.append(option); });
+				return select;
+			}
+			if (['CheckedListBox', 'ListBox'].includes(control.type)) {
+				const list = document.createElement('div'); list.className = 'preview-list';
+				control.items.split(',').map(item => item.trim()).filter(Boolean).forEach(item => {
+					const row = document.createElement('label');
+					if (control.type === 'CheckedListBox') { const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; row.append(checkbox); }
+					row.append(document.createTextNode(` ${item}`)); list.append(row);
+				});
+				return list;
+			}
+			if (control.type === 'NumericUpDown') {
+				const input = document.createElement('input'); input.type = 'number'; input.className = 'fake-input'; input.value = '0'; return input;
+			}
+			if (control.type === 'DataGridView') {
+				const table = document.createElement('table'); table.className = 'preview-list';
+				table.innerHTML = '<tr><th>Column 1</th><th>Column 2</th></tr><tr><td>Value</td><td>Value</td></tr>';
+				return table;
+			}
+			if (['PictureBox', 'ListView', 'TreeView', 'MenuStrip', 'ContextMenuStrip', 'TabControl', 'Panel', 'GroupBox', 'SplitContainer', 'FlowLayoutPanel', 'TableLayoutPanel', 'StatusStrip'].includes(control.type)) {
+				const surface = document.createElement('div'); surface.className = 'preview-surface';
+				surface.textContent = control.type === 'PictureBox' ? 'Image' : control.type;
+				return surface;
+			}
+			if (control.type === 'ProgressBar') {
+				const progress = document.createElement('progress'); progress.max = 100; progress.value = 62; progress.style.width = '100%'; progress.style.accentColor = 'var(--green)'; return progress;
+			}
+			const input = document.createElement(control.multiline ? 'textarea' : 'input');
+			if (!control.multiline) input.type = control.type === 'MaskedTextBox' ? 'text' : 'text';
+			input.className = 'fake-input'; input.placeholder = control.text || 'Enter text...'; input.readOnly = true;
+			return input;
+		}
+
+		function renderInspector() {
+			const control = controls.find(item => item.id === selectedId);
+			document.getElementById('selectionSubtitle').textContent = control ? `${control.type} · ${control.name}` : 'Form settings';
+			if (!control) {
+				inspector.innerHTML = `<div class="property-form">
+					<div class="field"><label for="formName">FORM NAME</label><input id="formName" value="My PowerShell App"></div>
+					<div class="field"><label for="formWidth">WINDOW SIZE</label><div class="field-row"><input id="formWidth" type="number" min="320" max="1600" value="560" aria-label="Window width"><input id="formHeight" type="number" min="240" max="1200" value="430" aria-label="Window height"></div></div>
+					<div class="field"><label for="formColor">ACCENT COLOR</label><select id="formColor"><option value="green">Fern green</option><option value="blue">Slate blue</option><option value="coral">Warm coral</option></select></div>
+				</div>`;
+				document.getElementById('formName').addEventListener('input', event => { document.getElementById('windowTitle').textContent = event.target.value || 'My PowerShell App'; outputCode.textContent = generatePowerShell(); });
+				document.getElementById('formWidth').addEventListener('input', updateFormSize);
+				document.getElementById('formHeight').addEventListener('input', updateFormSize);
+				document.getElementById('formColor').addEventListener('change', event => {
+					const colors = { green: '#16785e', blue: '#436c89', coral: '#d2644f' };
+					document.documentElement.style.setProperty('--green', colors[event.target.value]);
+					outputCode.textContent = generatePowerShell();
+				});
+				return;
+			}
+			const properties = controlProperties[control.type] || [];
+			const typicalEvents = [...new Set([
+				...(control.visual ? ['Click', 'DoubleClick', 'MouseEnter', 'MouseLeave'] : []),
+				...(controlSpecificEvents[control.type] || [])
+			])];
+			const availableEvents = typicalEvents.filter(eventName => !control.events.includes(eventName));
+			const propertyField = (property, label, type = 'number', options = []) => {
+				if (type === 'checkbox') return `<div class="field"><label class="check-field"><input id="prop${property}" type="checkbox" ${control[property] ? 'checked' : ''}> ${label}</label></div>`;
+				if (type === 'textarea') return `<div class="field"><label for="prop${property}">${label}</label><textarea id="prop${property}">${escapeHtml(control[property])}</textarea></div>`;
+				if (type === 'select') return `<div class="field"><label for="prop${property}">${label}</label><select id="prop${property}">${options.map(option => `<option value="${option}" ${control[property] === option ? 'selected' : ''}>${option}</option>`).join('')}</select></div>`;
+				return `<div class="field"><label for="prop${property}">${label}</label><input id="prop${property}" type="${type}" value="${escapeHtml(control[property])}"></div>`;
+			};
+			const propertyMarkup = properties.map(property => {
+				const fields = {
+					text: propertyField('text', control.type === 'TextBox' ? 'PLACEHOLDER' : 'TEXT', 'text'),
+					items: propertyField('items', 'ITEMS · comma separated', 'textarea'),
+					checked: propertyField('checked', 'Checked by default', 'checkbox'),
+					multiline: propertyField('multiline', 'Multiline', 'checkbox'),
+					readOnly: propertyField('readOnly', 'Read only', 'checkbox'),
+					maxLength: propertyField('maxLength', 'MAX LENGTH'),
+					dropDownStyle: propertyField('dropDownStyle', 'DROP-DOWN STYLE', 'select', ['DropDown', 'DropDownList', 'Simple']),
+					minimum: propertyField('minimum', 'MINIMUM'), maximum: propertyField('maximum', 'MAXIMUM'),
+					increment: propertyField('increment', 'INCREMENT'), value: propertyField('value', 'VALUE')
+				};
+				return fields[property];
+			}).join('');
+			inspector.innerHTML = `<div class="property-form">
+				<div class="field"><label for="propName">NAME</label><input id="propName" value="${escapeHtml(control.name)}"></div>
+				${propertyMarkup}
+				<div class="field-row">
+					${propertyField('enabled', 'Enabled', 'checkbox')}
+					${propertyField('visible', 'Visible', 'checkbox')}
+				</div>
+				<div class="field"><label>POSITION</label><div class="field-row"><input id="propX" type="number" value="${control.x}" aria-label="X position"><input id="propY" type="number" value="${control.y}" aria-label="Y position"></div></div>
+				${control.visual ? `<div class="field"><label>SIZE</label><div class="field-row"><input id="propWidth" type="number" min="40" value="${control.width}" aria-label="Width"><input id="propHeight" type="number" min="24" value="${control.height}" aria-label="Height"></div></div>` : ''}
+				<div class="inspector-separator"></div>
+				<div class="field">
+					<label for="eventSelect">EVENTS</label>
+					<div class="field-row">
+						<select id="eventSelect" ${availableEvents.length ? '' : 'disabled'}>
+							${availableEvents.length ? availableEvents.map(eventName => `<option value="${eventName}">${eventName}</option>`).join('') : `<option value="">${typicalEvents.length ? 'All typical events added' : 'No typical events available'}</option>`}
+						</select>
+						<button class="button" id="addEventBtn" type="button" ${availableEvents.length ? '' : 'disabled'}>Add event</button>
+					</div>
+					<div class="event-list">
+						${control.events.length ? control.events.map((eventName, index) => `<div class="event-item"><span>${escapeHtml(eventName)}</span><button class="event-remove" type="button" data-event-index="${index}" aria-label="Remove ${escapeHtml(eventName)} event" title="Remove event">×</button></div>`).join('') : '<p class="event-empty">No events added.</p>'}
+					</div>
+				</div>
+				<div class="inspector-separator"></div>
+				<button class="button" id="deleteFromInspector" style="width:100%;margin-top:15px;color:#a94836">Remove control</button>
+			</div>`;
+			const bind = (id, property, numeric = false) => document.getElementById(id)?.addEventListener('input', event => {
+				if (numeric) {
+					const value = Number(event.target.value);
+					if (event.target.value === '' || !Number.isFinite(value)) {
+						outputCode.textContent = generatePowerShell();
+						return;
+					}
+					control[property] = Math.max(0, value);
+				} else {
+					control[property] = event.target.value;
+				}
+				updateControlPreview(control);
+			});
+			bind('propName', 'name');
+			properties.filter(property => !['checked', 'multiline', 'readOnly'].includes(property)).forEach(property => bind(`prop${property}`, property, ['maxLength', 'minimum', 'maximum', 'increment', 'value'].includes(property)));
+			bind('propX', 'x', true); bind('propY', 'y', true); bind('propWidth', 'width', true); bind('propHeight', 'height', true);
+			['checked', 'multiline', 'readOnly', 'enabled', 'visible'].forEach(property => {
+				document.getElementById(`prop${property}`)?.addEventListener('change', event => { control[property] = event.target.checked; updateControlPreview(control); });
+			});
+			document.getElementById('addEventBtn').addEventListener('click', () => {
+				const eventName = document.getElementById('eventSelect').value;
+				if (!eventName || control.events.includes(eventName)) return;
+				control.events.push(eventName);
+				renderInspector();
+				outputCode.textContent = generatePowerShell();
+			});
+			inspector.querySelectorAll('.event-remove').forEach(button => button.addEventListener('click', () => {
+				control.events.splice(Number(button.dataset.eventIndex), 1);
+				renderInspector();
+				outputCode.textContent = generatePowerShell();
+			}));
+			document.getElementById('deleteFromInspector').addEventListener('click', () => {
+				controls.splice(controls.findIndex(item => item.id === control.id), 1); selectedId = null; render();
+			});
+		}
+
+		function updateFormSize() {
+			const widthInput = document.getElementById('formWidth');
+			const heightInput = document.getElementById('formHeight');
+			if (widthInput.value !== '') formWidth = Math.min(1600, Math.max(320, Number(widthInput.value) || 320));
+			if (heightInput.value !== '') formHeight = Math.min(1200, Math.max(280, Number(heightInput.value) || 280));
+			applyFormSize();
+			outputCode.textContent = generatePowerShell();
+		}
+
+		function applyFormSize() {
+			const formWindow = document.getElementById('formWindow');
+			formWindow.style.width = `min(100%, ${formWidth}px)`;
+			formWindow.style.height = `${formHeight}px`;
+			controls.forEach(control => {
+				control.width = Math.min(control.width, Math.max(40, formContent.clientWidth - control.x));
+				control.height = Math.min(control.height, Math.max(24, formContent.clientHeight - control.y));
+				control.x = Math.min(control.x, Math.max(0, formContent.clientWidth - control.width));
+				control.y = Math.min(control.y, Math.max(0, formContent.clientHeight - control.height));
+				const element = formContent.querySelector(`[data-id="${control.id}"]`);
+				if (element) applyControlGeometry(element, control);
+				updateGeometryFields(control);
+			});
+		}
+
+		const formResize = document.getElementById('formResize');
+		formResize.addEventListener('pointerdown', event => {
+			event.preventDefault();
+			formResize.setPointerCapture(event.pointerId);
+			const startX = event.clientX;
+			const startY = event.clientY;
+			const startWidth = formWidth;
+			const startHeight = formHeight;
+			const move = moveEvent => {
+				formWidth = Math.min(1600, Math.max(320, startWidth + moveEvent.clientX - startX));
+				formHeight = Math.min(1200, Math.max(280, startHeight + moveEvent.clientY - startY));
+				applyFormSize();
+				outputCode.textContent = generatePowerShell();
+			};
+			const stop = () => {
+				formResize.removeEventListener('pointermove', move);
+				formResize.removeEventListener('pointerup', stop);
+				formResize.removeEventListener('pointercancel', stop);
+			};
+			formResize.addEventListener('pointermove', move);
+			formResize.addEventListener('pointerup', stop);
+			formResize.addEventListener('pointercancel', stop);
+		});
+
+		function escapeHtml(value) {
+			return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+		}
+		function psQuote(value) { return `'${String(value).replace(/'/g, "''")}'`; }
+		function safeIdentifier(value) { return `$${String(value).replace(/[^a-zA-Z0-9_]/g, '_')}`; }
+
+		function generatePowerShell() {
+			const title = document.getElementById('windowTitle')?.textContent || 'My PowerShell App';
+			const lines = [
+				'Add-Type -AssemblyName System.Windows.Forms',
+				'Add-Type -AssemblyName System.Drawing',
+				'',
+				'$form = New-Object System.Windows.Forms.Form',
+				`$form.Text = ${psQuote(title)}`,
+				'$form.StartPosition = "CenterScreen"',
+				`$form.ClientSize = New-Object System.Drawing.Size(${formWidth}, ${formHeight - 40})`,
+				'$form.BackColor = [System.Drawing.Color]::White',
+				''
+			];
+			controls.forEach(control => {
+				const variable = safeIdentifier(control.name);
+				lines.push(`${variable} = New-Object System.Windows.Forms.${control.type}`);
+				if (control.visual && control.type !== 'ProgressBar') lines.push(`${variable}.Text = ${psQuote(control.text)}`);
+				if (control.type === 'TextBox' && control.text) lines.push(`${variable}.PlaceholderText = ${psQuote(control.text)}`);
+				if (['ComboBox', 'CheckedListBox', 'ListBox'].includes(control.type)) {
+					control.items.split(',').map(item => item.trim()).filter(Boolean).forEach(item => lines.push(`${variable}.Items.Add(${psQuote(item)}) | Out-Null`));
+				}
+				if (control.type === 'DataGridView') lines.push(`${variable}.ColumnCount = 2`, `${variable}.RowCount = 2`);
+				if (control.checked) lines.push(`${variable}.Checked = $true`);
+				if (control.multiline) lines.push(`${variable}.Multiline = $true`);
+				if (control.readOnly) lines.push(`${variable}.ReadOnly = $true`);
+				if (control.maxLength && control.type === 'TextBox') lines.push(`${variable}.MaxLength = ${control.maxLength}`);
+				if (control.type === 'ComboBox') lines.push(`${variable}.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::${control.dropDownStyle}`);
+				if (['NumericUpDown', 'ProgressBar'].includes(control.type)) {
+					lines.push(`${variable}.Minimum = ${control.minimum}`, `${variable}.Maximum = ${control.maximum}`, `${variable}.Value = ${Math.min(control.maximum, Math.max(control.minimum, control.value))}`);
+					if (control.type === 'NumericUpDown') lines.push(`${variable}.Increment = ${control.increment}`);
+				}
+				if (!control.enabled) lines.push(`${variable}.Enabled = $false`);
+				if (!control.visible) lines.push(`${variable}.Visible = $false`);
+				if (control.visual) {
+					lines.push(`${variable}.Location = New-Object System.Drawing.Point(${control.x}, ${control.y})`);
+					lines.push(`${variable}.Size = New-Object System.Drawing.Size(${control.width}, ${control.height})`);
+					lines.push(`$form.Controls.Add(${variable})`);
+				}
+				lines.push('');
+			});
+			controls.forEach(control => {
+				const variable = safeIdentifier(control.name);
+				control.events.forEach(eventName => {
+					lines.push(`${variable}.Add_${eventName}({`, '    param($sender, $eventArgs)', `    # TODO: Add ${eventName} event logic here`, '})');
+				});
+				if (control.events.length) lines.push('');
+			});
+			lines.push('$form.Add_Shown({ $form.Activate() })', '[void]$form.ShowDialog()');
+			return lines.join('\n');
+		}
+
+		function notify(message) {
+			const toast = document.getElementById('toast'); toast.textContent = message; toast.classList.add('show');
+			clearTimeout(notify.timeout); notify.timeout = setTimeout(() => toast.classList.remove('show'), 1800);
+		}
+
+		document.getElementById('copyBtn').addEventListener('click', async () => {
+			try { await navigator.clipboard.writeText(generatePowerShell()); notify('PowerShell script copied'); }
+			catch { notify('Clipboard unavailable in this browser'); }
+		});
+		document.getElementById('downloadBtn').addEventListener('click', () => {
+			const blob = new Blob([generatePowerShell()], { type: 'text/plain;charset=utf-8' });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a'); link.href = url; link.download = 'PowerGUI-Form.ps1'; link.click();
+			URL.revokeObjectURL(url); notify('PowerShell script exported');
+		});
+		document.getElementById('collapseBtn').addEventListener('click', event => {
+			const drawer = document.getElementById('outputDrawer'); drawer.classList.toggle('collapsed');
+			event.currentTarget.textContent = drawer.classList.contains('collapsed') ? '⌃' : '⌄';
+		});
+		document.getElementById('clearBtn').addEventListener('click', () => { controls.splice(0); selectedId = null; render(); notify('Form cleared'); });
+		document.getElementById('newBtn').addEventListener('click', () => {
+			controls.splice(0); selectedId = null; nextId = 1;
+			document.getElementById('windowTitle').textContent = 'My PowerShell App';
+			render(); notify('New form created');
+		});
+		render();
+	</script>
+</body>
+</html>
