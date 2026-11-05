@@ -57,6 +57,7 @@
 		}
 		.brand-name { font: 700 16px 'Space Grotesk', sans-serif; letter-spacing: 0; }
 		.brand-name span { color: var(--green); }
+		.brand-version { align-self: center; margin-left: -1px; color: #929c9e; font: 10px 'DM Mono', monospace; }
 		.project-name { margin-left: 25px; padding-left: 25px; border-left: 1px solid var(--line); color: #647078; }
 		.top-actions { display: flex; align-items: center; gap: 9px; }
 		.button {
@@ -182,6 +183,7 @@
 		.field { margin-top: 15px; }
 		.field label { display: block; margin-bottom: 6px; color: #64706b; font-size: 11px; font-weight: 600; }
 		.field input, .field select, .field textarea { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid #dce3e0; border-radius: 5px; outline: none; background: #fff; font-size: 12px; }
+		.field input[type=color] { padding: 4px; cursor: pointer; }
 		.field textarea { min-height: 60px; resize: vertical; }
 		.field input:focus, .field select:focus, .field textarea:focus { border-color: #6ea78e; box-shadow: 0 0 0 2px #e6f3eb; }
 		.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -248,6 +250,7 @@
 			<div class="brand">
 				<div class="brand-mark">P</div>
 				<div class="brand-name">Power<span>GUI</span></div>
+				<span class="brand-version">v1.0.1</span>
 				<div class="project-name">Untitled form</div>
 			</div>
 			<div class="top-actions">
@@ -355,6 +358,12 @@
 			NumericUpDown: ['minimum', 'maximum', 'increment', 'value'],
 			ProgressBar: ['minimum', 'maximum', 'value'], DataGridView: ['readOnly']
 		};
+		const controlColorProperties = Object.fromEntries(
+			definitions.filter(definition => definition.visual !== false).map(definition => [definition.type, ['backColor', 'foreColor']])
+		);
+		controlColorProperties.ContextMenuStrip = ['backColor', 'foreColor'];
+		controlColorProperties.ToolTip = ['backColor', 'foreColor'];
+		controlColorProperties.ColorDialog = ['color'];
 		const controlSpecificEvents = {
 			Button: ['MouseDown', 'MouseUp'],
 			CheckBox: ['CheckedChanged'],
@@ -385,6 +394,9 @@
 		let nextId = 1;
 		let formWidth = 560;
 		let formHeight = 430;
+		let accentColor = '#16785e';
+		let formBackColor = '#ffffff';
+		let formForeColor = null;
 
 		const controlList = document.getElementById('controlList');
 		const formContent = document.getElementById('formContent');
@@ -394,6 +406,13 @@
 		const layout = document.querySelector('.layout');
 		const alignGridInput = document.getElementById('alignGrid');
 		const gridSizeInput = document.getElementById('gridSize');
+		const formWindow = document.getElementById('formWindow');
+
+		formWindow.addEventListener('click', event => {
+			if (event.target.closest('.design-control, .form-resize') || selectedId === null) return;
+			selectedId = null;
+			renderInspector();
+		});
 
 		function gridStep() {
 			const size = Number(gridSizeInput.value);
@@ -548,7 +567,8 @@
 				text: definition.text, x: 20, y: 20 + controls.length * 46, width: definition.type === 'Button' ? 100 : 280,
 				height: definition.multiline ? 64 : ['DataGridView', 'CheckedListBox', 'ListBox', 'ListView', 'TreeView'].includes(definition.type) ? 96 : 34,
 				checked: false, items: 'Option 1, Option 2, Option 3', events: [], multiline: Boolean(definition.multiline), readOnly: false,
-				maxLength: 0, dropDownStyle: 'DropDown', minimum: 0, maximum: 100, increment: 1, value: 0, enabled: true, visible: true
+				maxLength: 0, dropDownStyle: 'DropDown', minimum: 0, maximum: 100, increment: 1, value: 0, enabled: true, visible: true,
+				backColor: null, foreColor: null, color: null
 			};
 			if (dropX !== null && dropY !== null) {
 				control.x = Math.max(0, dropX - control.width / 2);
@@ -576,6 +596,7 @@
 				});
 				element.addEventListener('pointerdown', event => startControlMove(event, element, control));
 				element.append(createPreview(control));
+				applyControlColors(element, control);
 				if (control.visual) {
 					const resize = document.createElement('button');
 					resize.className = 'control-resize';
@@ -616,6 +637,7 @@
 			if (!element) return;
 			const preview = element.firstElementChild;
 			if (preview) element.replaceChild(createPreview(control), preview);
+			applyControlColors(element, control);
 			applyControlGeometry(element, control);
 			document.getElementById('selectionSubtitle').textContent = `${control.type} · ${control.name}`;
 			outputCode.textContent = generatePowerShell();
@@ -745,26 +767,46 @@
 			return input;
 		}
 
+		function applyControlColors(element, control) {
+			const preview = element.firstElementChild;
+			if (!preview) return;
+			if (control.foreColor) preview.style.color = control.foreColor;
+			if (control.backColor) preview.style.backgroundColor = control.backColor;
+			if (control.color) preview.style.backgroundColor = control.color;
+		}
+
 		function renderInspector() {
 			const control = controls.find(item => item.id === selectedId);
 			document.getElementById('selectionSubtitle').textContent = control ? `${control.type} · ${control.name}` : 'Form settings';
 			if (!control) {
 				inspector.innerHTML = `<div class="property-form">
-					<div class="field"><label for="formName">FORM NAME</label><input id="formName" value="My PowerShell App"></div>
-					<div class="field"><label for="formWidth">WINDOW SIZE</label><div class="field-row"><input id="formWidth" type="number" min="320" max="1600" value="560" aria-label="Window width"><input id="formHeight" type="number" min="240" max="1200" value="430" aria-label="Window height"></div></div>
-					<div class="field"><label for="formColor">ACCENT COLOR</label><select id="formColor"><option value="green">Fern green</option><option value="blue">Slate blue</option><option value="coral">Warm coral</option></select></div>
+					<div class="field"><label for="formName">FORM NAME</label><input id="formName" value="${escapeHtml(document.getElementById('windowTitle').textContent)}"></div>
+					<div class="field"><label for="formWidth">WINDOW SIZE</label><div class="field-row"><input id="formWidth" type="number" min="320" max="1600" value="${formWidth}" aria-label="Window width"><input id="formHeight" type="number" min="240" max="1200" value="${formHeight}" aria-label="Window height"></div></div>
+					<div class="field"><label for="formColor">ACCENT COLOR</label><input id="formColor" type="color" value="${accentColor}"></div>
+					<div class="field"><label for="formBackColor">BACK COLOR</label><input id="formBackColor" type="color" value="${formBackColor}"></div>
+					<div class="field"><label for="formForeColor">FORE COLOR</label><input id="formForeColor" type="color" value="${formForeColor || '#000000'}"></div>
 				</div>`;
 				document.getElementById('formName').addEventListener('input', event => { document.getElementById('windowTitle').textContent = event.target.value || 'My PowerShell App'; outputCode.textContent = generatePowerShell(); });
 				document.getElementById('formWidth').addEventListener('input', updateFormSize);
 				document.getElementById('formHeight').addEventListener('input', updateFormSize);
-				document.getElementById('formColor').addEventListener('change', event => {
-					const colors = { green: '#16785e', blue: '#436c89', coral: '#d2644f' };
-					document.documentElement.style.setProperty('--green', colors[event.target.value]);
+				document.getElementById('formColor').addEventListener('input', event => {
+					accentColor = event.target.value;
+					document.documentElement.style.setProperty('--green', accentColor);
+					outputCode.textContent = generatePowerShell();
+				});
+				document.getElementById('formBackColor').addEventListener('input', event => {
+					formBackColor = event.target.value;
+					document.getElementById('formWindow').style.backgroundColor = formBackColor;
+					outputCode.textContent = generatePowerShell();
+				});
+				document.getElementById('formForeColor').addEventListener('input', event => {
+					formForeColor = event.target.value;
+					document.getElementById('formWindow').style.color = formForeColor;
 					outputCode.textContent = generatePowerShell();
 				});
 				return;
 			}
-			const properties = controlProperties[control.type] || [];
+			const properties = [...(controlProperties[control.type] || []), ...(controlColorProperties[control.type] || [])];
 			const typicalEvents = [...new Set([
 				...(control.visual ? ['Click', 'DoubleClick', 'MouseEnter', 'MouseLeave'] : []),
 				...(controlSpecificEvents[control.type] || [])
@@ -774,6 +816,7 @@
 				if (type === 'checkbox') return `<div class="field"><label class="check-field"><input id="prop${property}" type="checkbox" ${control[property] ? 'checked' : ''}> ${label}</label></div>`;
 				if (type === 'textarea') return `<div class="field"><label for="prop${property}">${label}</label><textarea id="prop${property}">${escapeHtml(control[property])}</textarea></div>`;
 				if (type === 'select') return `<div class="field"><label for="prop${property}">${label}</label><select id="prop${property}">${options.map(option => `<option value="${option}" ${control[property] === option ? 'selected' : ''}>${option}</option>`).join('')}</select></div>`;
+				if (type === 'color') return `<div class="field"><label for="prop${property}">${label}</label><input id="prop${property}" type="color" value="${control[property] || (property === 'backColor' ? '#f0f0f0' : '#000000')}"></div>`;
 				return `<div class="field"><label for="prop${property}">${label}</label><input id="prop${property}" type="${type}" value="${escapeHtml(control[property])}"></div>`;
 			};
 			const propertyMarkup = properties.map(property => {
@@ -786,7 +829,10 @@
 					maxLength: propertyField('maxLength', 'MAX LENGTH'),
 					dropDownStyle: propertyField('dropDownStyle', 'DROP-DOWN STYLE', 'select', ['DropDown', 'DropDownList', 'Simple']),
 					minimum: propertyField('minimum', 'MINIMUM'), maximum: propertyField('maximum', 'MAXIMUM'),
-					increment: propertyField('increment', 'INCREMENT'), value: propertyField('value', 'VALUE')
+					increment: propertyField('increment', 'INCREMENT'), value: propertyField('value', 'VALUE'),
+					backColor: propertyField('backColor', 'BACK COLOR', 'color'),
+					foreColor: propertyField('foreColor', 'FORE COLOR', 'color'),
+					color: propertyField('color', 'COLOR', 'color')
 				};
 				return fields[property];
 			}).join('');
@@ -915,12 +961,16 @@
 				`$form.Text = ${psQuote(title)}`,
 				'$form.StartPosition = "CenterScreen"',
 				`$form.ClientSize = New-Object System.Drawing.Size(${formWidth}, ${formHeight - 40})`,
-				'$form.BackColor = [System.Drawing.Color]::White',
+				`$form.BackColor = [System.Drawing.ColorTranslator]::FromHtml(${psQuote(formBackColor)})`,
 				''
 			];
+			if (formForeColor) lines.splice(lines.length - 1, 0, `$form.ForeColor = [System.Drawing.ColorTranslator]::FromHtml(${psQuote(formForeColor)})`);
 			controls.forEach(control => {
 				const variable = safeIdentifier(control.name);
 				lines.push(`${variable} = New-Object System.Windows.Forms.${control.type}`);
+				for (const [property, name] of [['backColor', 'BackColor'], ['foreColor', 'ForeColor'], ['color', 'Color']]) {
+					if (control[property]) lines.push(`${variable}.${name} = [System.Drawing.ColorTranslator]::FromHtml(${psQuote(control[property])})`);
+				}
 				if (control.visual && control.type !== 'ProgressBar') lines.push(`${variable}.Text = ${psQuote(control.text)}`);
 				if (control.type === 'TextBox' && control.text) lines.push(`${variable}.PlaceholderText = ${psQuote(control.text)}`);
 				if (['ComboBox', 'CheckedListBox', 'ListBox'].includes(control.type)) {
