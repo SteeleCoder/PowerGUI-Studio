@@ -1,3 +1,4 @@
+## PowerGUI Studio
 A browser-based visual designer for building Windows Forms interfaces and exporting them as PowerShell scripts.
 
 About this project:
